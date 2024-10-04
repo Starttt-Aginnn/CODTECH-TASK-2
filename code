@@ -1,0 +1,85 @@
+#define BLYNK_TEMPLATE_ID "BLYNK_TEMPLATE_ID"
+#define BLYNK_TEMPLATE_NAME "BLYNK_TEMPLATE_NAME"
+
+// Include the necessary library files
+#include <Wire.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>  // BMP280 sensor library
+
+#define TH 5     // DHT11 sensor pin
+#define Rain 36  // Rain sensor pin
+
+// Create objects for sensors
+DHT dht(TH, DHT11);
+Adafruit_BMP280 bmp;  // BMP280 sensor object
+BlynkTimer timer;
+
+// Enter your Blynk authentication token
+char auth[] = "vFd_F-UwRbY-YcN5jTA6cMjmyfEhOwUC";
+
+// Enter your Wi-Fi credentials
+char ssid[] = "Wi-Fi NAME";
+char pass[] = "Wi-Fi PASSWORD";
+
+void setup() {
+  // Initialize Serial monitor for debugging
+  Serial.begin(115200);
+
+  // Initialize Blynk
+  Blynk.begin(auth, ssid, pass);
+
+  // Initialize sensors
+  dht.begin();
+
+
+  // Set up the timer to call sensor functions periodically
+  timer.setInterval(2000L, DHT11sensor);  // Call DHT sensor function every 2 seconds
+  timer.setInterval(2000L, rainSensor);   // Call rain sensor function every 2 seconds
+}
+
+// Get the DHT11 sensor values for temperature and humidity
+void DHT11sensor() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  // Send temperature and humidity data to Blynk virtual pins
+  Blynk.virtualWrite(V0, t);
+  Blynk.virtualWrite(V1, h);
+
+  // Debugging output to Serial Monitor
+  Serial.print("Temperature: ");
+  Serial.print(t);
+  Serial.print(" °C, Humidity: ");
+  Serial.print(h);
+  Serial.println(" %");
+}
+
+// Get the rain sensor values
+void rainSensor() {
+  int Rvalue = analogRead(Rain);
+  Rvalue = map(Rvalue, 0, 4095, 0, 100);
+  Rvalue = (Rvalue - 100) * -1;
+  // Send rain sensor data to Blynk virtual pin
+  Blynk.virtualWrite(V3, Rvalue);
+
+  // Debugging output to Serial Monitor
+  Serial.print("Rain Sensor: ");
+  Serial.println(Rvalue);
+}
+
+
+void loop() {
+  // Run the Blynk library
+  Blynk.run();
+
+  // Run the timer for scheduled tasks
+  timer.run();
+}
